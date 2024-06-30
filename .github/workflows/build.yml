@@ -1,13 +1,16 @@
 name: Build Brunch using Github Actions
+
 on:
   push:
     branches:
       - 'continuous-integration'
     paths-ignore:
       - 'README.md'
+
 concurrency:
   group: environment-${{ github.ref }}
   cancel-in-progress: true
+
 jobs:
   prepare-kernels:
     name: Prepare Kernels
@@ -18,7 +21,6 @@ jobs:
       - name: Install dependencies
         run: |
           yes | DEBIAN_FRONTEND=noninteractive sudo apt update
-          #yes | DEBIAN_FRONTEND=noninteractive sudo apt dist-upgrade
           yes | DEBIAN_FRONTEND=noninteractive sudo apt install gcc-12 g++-12 git fakeroot build-essential ncurses-dev xz-utils libssl-dev bc flex libelf-dev bison sbsigntool
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 110 --slave /usr/bin/g++ g++ /usr/bin/g++-12 --slave /usr/bin/gcov gcov /usr/bin/gcov-12
       - name: Checkout Brunch source code
@@ -36,18 +38,18 @@ jobs:
           name: kernels-source
           path: /tmp/kernels-source.tar.gz
           if-no-files-found: error
+
   build-kernels:
     name: Build Kernels
     needs: prepare-kernels
     runs-on: ubuntu-22.04
     strategy:
-        matrix:
-            kernel: ${{ fromJson(needs.prepare-kernels.outputs.matrix) }}
+      matrix:
+        kernel: ${{ fromJson(needs.prepare-kernels.outputs.matrix) }}
     steps:
       - name: Install dependencies
         run: |
           yes | DEBIAN_FRONTEND=noninteractive sudo apt update
-          #yes | DEBIAN_FRONTEND=noninteractive sudo apt dist-upgrade
           yes | DEBIAN_FRONTEND=noninteractive sudo apt install gcc-12 g++-12 git fakeroot build-essential ncurses-dev xz-utils libssl-dev bc flex libelf-dev bison sbsigntool
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 110 --slave /usr/bin/g++ g++ /usr/bin/g++-12 --slave /usr/bin/gcov gcov /usr/bin/gcov-12
       - name: Checkout Brunch source code
@@ -76,12 +78,13 @@ jobs:
         run: rm -r /persist/keys
       - name: Compress built kernel
         run: tar zcf /tmp/built-kernel-${{ matrix.kernel }}.tar.gz kernels/${{ matrix.kernel }}
-      - name: Upload kernels source
+      - name: Upload built kernel
         uses: actions/upload-artifact@v4
         with:
           name: built-kernel-${{ matrix.kernel }}
           path: /tmp/built-kernel-${{ matrix.kernel }}.tar.gz
           if-no-files-found: error
+
   build-brunch:
     name: Build Brunch
     needs: build-kernels
@@ -98,7 +101,6 @@ jobs:
       - name: Install dependencies
         run: |
           yes | DEBIAN_FRONTEND=noninteractive sudo apt update
-          #yes | DEBIAN_FRONTEND=noninteractive sudo apt dist-upgrade
           yes | DEBIAN_FRONTEND=noninteractive sudo apt install gcc-12 g++-12 git fakeroot build-essential ncurses-dev xz-utils libssl-dev bc flex libelf-dev bison sbsigntool python3-protobuf rdfind zstd
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 110 --slave /usr/bin/g++ g++ /usr/bin/g++-12 --slave /usr/bin/gcov gcov /usr/bin/gcov-12
           pip3 install --upgrade google-api-python-client
@@ -128,6 +130,7 @@ jobs:
           name: brunch-build
           path: out/brunch_r*.tar.gz
           if-no-files-found: error
+
   release:
     name: Make a Brunch release
     permissions:
